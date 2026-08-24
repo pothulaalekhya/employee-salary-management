@@ -145,6 +145,11 @@
   background: #f8fafc;
 }
 
+.clickable-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
 /* Badges and Chips */
 .code-badge {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;

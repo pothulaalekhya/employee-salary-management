@@ -170,7 +170,12 @@
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns" class="employee-row"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          class="employee-row clickable-row"
+          [routerLink]="['/employees', row.id]"
+        ></tr>
 
         <!-- No data row -->
         <tr class="mat-row" *matNoDataRow>
