@@ -1,44 +1,46 @@
 <div class="app-layout">
-  <header class="app-nav">
-    <div class="nav-brand">
-      <mat-icon class="brand-icon">payments</mat-icon>
-      <span class="brand-name font-heading">ACME Salary Management</span>
-    </div>
-    <div class="nav-status">
-      <span class="status-badge" [class.online]="backendStatus() === 'online'" [class.offline]="backendStatus() !== 'online'">
-        <span class="dot"></span>
-        API: {{ backendStatus() | uppercase }} (Port 8081)
-      </span>
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <mat-icon>payments</mat-icon>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">ACME Corp</span>
+          <span class="brand-subtitle">Salary Management System</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a
+          routerLink="/employees"
+          routerLinkActive="nav-active"
+          class="nav-item"
+        >
+          <mat-icon>badge</mat-icon>
+          <span>Employees</span>
+        </a>
+      </nav>
+
+      <div class="header-actions">
+        @if (backendOnline) {
+          <div class="status-indicator online" title="Backend API operational on port 8081">
+            <span class="status-dot"></span>
+            <span>API Online</span>
+          </div>
+        } @else {
+          <div class="status-indicator offline" title="Backend API unreachable">
+            <span class="status-dot"></span>
+            <span>API Offline</span>
+          </div>
+        }
+      </div>
     </div>
   </header>
 
-  <main class="app-content">
-    <div class="placeholder-container">
-      <div class="placeholder-card">
-        <mat-icon class="placeholder-icon">dns</mat-icon>
-        <h2 class="font-heading">Employee Salary Management System</h2>
-        <p class="subtitle">System scaffolded and connected to MySQL database.</p>
-        
-        <div class="health-check-box">
-          <div class="health-item">
-            <span class="label">Backend Status:</span>
-            <span class="value" [class.ok]="backendStatus() === 'online'">
-              {{ backendStatus() === 'online' ? 'Connected (/api/health OK)' : 'Checking / Disconnected' }}
-            </span>
-          </div>
-          <div class="health-item">
-            <span class="label">Database:</span>
-            <span class="value ok">MySQL 8.0 (salary_db)</span>
-          </div>
-        </div>
-
-        <button mat-flat-button color="primary" (click)="checkBackendHealth()">
-          <mat-icon>refresh</mat-icon>
-          Re-check API Health
-        </button>
-      </div>
-
-      <router-outlet></router-outlet>
-    </div>
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <router-outlet></router-outlet>
   </main>
 </div>

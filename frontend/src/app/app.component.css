@@ -1,147 +1,152 @@
 .app-layout {
   min-height: 100vh;
-  background-color: #f8fafc;
   display: flex;
   flex-direction: column;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-.app-nav {
+/* Header */
+.app-header {
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
-  padding: 0.85rem 2rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 64px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
 }
 
-.nav-brand {
+/* Brand Section */
+.brand-section {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
-.brand-icon {
-  color: #4f46e5;
-}
-
-.brand-name {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.status-badge.online {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-}
-
-.status-badge.online .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
-}
-
-.status-badge.offline {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.status-badge.offline .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ef4444;
-}
-
-.app-content {
-  flex: 1;
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  background: linear-space-gradient, #2563eb;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
-.placeholder-container {
-  width: 100%;
-  max-width: 540px;
+.brand-logo mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
 }
 
-.placeholder-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 2.5rem 2rem;
-  text-align: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+.brand-text {
+  display: flex;
+  flex-direction: column;
 }
 
-.placeholder-icon {
-  font-size: 40px;
-  width: 40px;
-  height: 40px;
-  color: #4f46e5;
-  margin-bottom: 0.75rem;
-}
-
-.placeholder-card h2 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.35rem;
+.brand-title {
+  font-size: 16px;
   font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+/* Nav Links */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.nav-item mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.nav-item:hover {
+  background: #f1f5f9;
   color: #0f172a;
 }
 
-.subtitle {
-  margin: 0 0 1.75rem 0;
-  color: #64748b;
-  font-size: 0.9rem;
+.nav-active {
+  background: #eff6ff !important;
+  color: #2563eb !important;
 }
 
-.health-check-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.health-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-}
-
-.health-item .label {
-  color: #64748b;
-  font-weight: 500;
-}
-
-.health-item .value {
+/* Status Indicator */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
   font-weight: 600;
-  color: #e11d48;
 }
 
-.health-item .value.ok {
-  color: #16a34a;
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
-button[mat-flat-button] {
-  border-radius: 8px;
-  padding: 0.5rem 1.25rem;
+.status-indicator.online {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.status-indicator.online .status-dot {
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.status-indicator.offline {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.status-indicator.offline .status-dot {
+  background: #ef4444;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
 }

@@ -1,0 +1,201 @@
+<div class="employee-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Employees Directory</h1>
+      <p class="page-subtitle">Manage organization headcount, roles, and compensation in native currencies</p>
+    </div>
+    <div class="header-stats">
+      <span class="stat-badge">
+        <mat-icon>people</mat-icon>
+        <strong>{{ totalElements | number }}</strong> Total Employees
+      </span>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <mat-card class="filter-card">
+    <div class="filter-grid">
+      <!-- Search Input -->
+      <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+        <mat-label>Search by employee name</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchInput($event)"
+          placeholder="e.g. Sarah Connor"
+        />
+        @if (searchTerm) {
+          <button matSuffix mat-icon-button aria-label="Clear" (click)="searchTerm = ''; onSearchInput('')">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+
+      <!-- Country Filter -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Country</mat-label>
+        <mat-icon matPrefix>public</mat-icon>
+        <mat-select [(ngModel)]="selectedCountry" (selectionChange)="onCountryChange($event.value)">
+          <mat-option value="">All Countries</mat-option>
+          @for (c of countries; track c) {
+            <mat-option [value]="c">{{ c }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Department Filter -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Department</mat-label>
+        <mat-icon matPrefix>business</mat-icon>
+        <mat-select [(ngModel)]="selectedDepartment" (selectionChange)="onDepartmentChange($event.value)">
+          <mat-option value="">All Departments</mat-option>
+          @for (d of departments; track d) {
+            <mat-option [value]="d">{{ d }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Min Salary -->
+      <mat-form-field appearance="outline" class="salary-field" subscriptSizing="dynamic">
+        <mat-label>Min Salary</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          placeholder="Min"
+          [(ngModel)]="minSalary"
+          (change)="onSalaryRangeChange()"
+        />
+      </mat-form-field>
+
+      <!-- Max Salary -->
+      <mat-form-field appearance="outline" class="salary-field" subscriptSizing="dynamic">
+        <mat-label>Max Salary</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          placeholder="Max"
+          [(ngModel)]="maxSalary"
+          (change)="onSalaryRangeChange()"
+        />
+      </mat-form-field>
+
+      <!-- Reset Filters Button -->
+      <div class="filter-actions">
+        <button mat-stroked-button color="warn" (click)="resetFilters()" matTooltip="Clear all filters">
+          <mat-icon>filter_alt_off</mat-icon>
+          Reset
+        </button>
+      </div>
+    </div>
+  </mat-card>
+
+  <!-- Table Container Card -->
+  <mat-card class="table-card">
+    <div class="table-wrapper">
+      @if (isLoading) {
+        <div class="loading-overlay">
+          <mat-spinner diameter="48"></mat-spinner>
+          <span>Loading employees...</span>
+        </div>
+      }
+
+      <table mat-table [dataSource]="employees" matSort (matSortChange)="onSortChange($event)" class="employee-table">
+        <!-- Code Column -->
+        <ng-container matColumnDef="employeeCode">
+          <th mat-header-cell *matHeaderCellDef>Code</th>
+          <td mat-cell *matCellDef="let emp">
+            <span class="code-badge">{{ emp.employeeCode }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Name Column -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="name">Name</th>
+          <td mat-cell *matCellDef="let emp">
+            <div class="name-cell">
+              <strong>{{ emp.name }}</strong>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Country Column -->
+        <ng-container matColumnDef="country">
+          <th mat-header-cell *matHeaderCellDef>Country</th>
+          <td mat-cell *matCellDef="let emp">
+            <span class="country-pill">{{ emp.country }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Department Column -->
+        <ng-container matColumnDef="department">
+          <th mat-header-cell *matHeaderCellDef>Department</th>
+          <td mat-cell *matCellDef="let emp">
+            <span class="dept-badge">{{ emp.department }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Title Column -->
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef>Title / Role</th>
+          <td mat-cell *matCellDef="let emp">
+            <span class="title-text">{{ emp.title || '-' }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Current Salary Column -->
+        <ng-container matColumnDef="currentSalary">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="currentSalary" class="salary-header">Current Salary</th>
+          <td mat-cell *matCellDef="let emp" class="salary-cell">
+            <div class="salary-value">
+              <strong>{{ emp.currentSalary | currencyFormat: emp.currency }}</strong>
+              <span class="currency-tag">{{ emp.currency }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="active">
+          <th mat-header-cell *matHeaderCellDef class="center-header">Status</th>
+          <td mat-cell *matCellDef="let emp" class="center-cell">
+            @if (emp.active) {
+              <span class="status-chip active-chip">Active</span>
+            } @else {
+              <span class="status-chip inactive-chip">Inactive</span>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns" class="employee-row"></tr>
+
+        <!-- No data row -->
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell no-data-cell" [attr.colspan]="displayedColumns.length">
+            @if (!isLoading) {
+              <div class="empty-state">
+                <mat-icon>search_off</mat-icon>
+                <p>No employees found matching the specified filters.</p>
+                <button mat-button color="primary" (click)="resetFilters()">Reset Filters</button>
+              </div>
+            }
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Server-Side Paginator -->
+    <mat-paginator
+      [length]="totalElements"
+      [pageSize]="pageSize"
+      [pageIndex]="pageIndex"
+      [pageSizeOptions]="[10, 20, 50, 100]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons
+      aria-label="Select employee directory page"
+    ></mat-paginator>
+  </mat-card>
+</div>

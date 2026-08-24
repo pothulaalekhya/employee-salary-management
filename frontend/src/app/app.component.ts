@@ -1,49 +1,46 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { RouterOutlet } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { ApiService } from './services/api.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    RouterOutlet,
+    RouterModule,
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
-    MatCardModule
+    MatChipsModule
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  styleUrls: ['./app.component.css']
 })
 export class App implements OnInit {
-  private readonly http = inject(HttpClient);
-  
-  protected readonly title = signal('ACME Salary Management');
-  protected readonly backendStatus = signal<'checking' | 'online' | 'offline'>('checking');
-  protected readonly backendUrl = 'http://localhost:8081/api/health';
+  private readonly apiService = inject(ApiService);
 
-  ngOnInit() {
+  public backendOnline = false;
+  public checkingHealth = true;
+
+  ngOnInit(): void {
     this.checkBackendHealth();
   }
 
-  checkBackendHealth() {
-    this.backendStatus.set('checking');
-    this.http.get<{ status: string }>(this.backendUrl).subscribe({
-      next: (data) => {
-        if (data && data.status === 'ok') {
-          this.backendStatus.set('online');
-        } else {
-          this.backendStatus.set('offline');
-        }
+  public checkBackendHealth(): void {
+    this.checkingHealth = true;
+    this.apiService.getHealth().subscribe({
+      next: res => {
+        this.backendOnline = res && res.status === 'ok';
+        this.checkingHealth = false;
       },
       error: () => {
-        this.backendStatus.set('offline');
+        this.backendOnline = false;
+        this.checkingHealth = false;
       }
     });
   }
