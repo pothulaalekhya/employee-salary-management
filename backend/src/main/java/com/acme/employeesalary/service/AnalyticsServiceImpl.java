@@ -1,7 +1,8 @@
 package com.acme.employeesalary.service;
 
 import com.acme.employeesalary.dto.HeadcountByCountryDto;
-import com.acme.employeesalary.dto.SalaryStatsByGroupDto;
+import com.acme.employeesalary.dto.SalaryByCountryDto;
+import com.acme.employeesalary.dto.SalaryByDepartmentDto;
 import com.acme.employeesalary.dto.TotalPayrollDto;
 import com.acme.employeesalary.repository.AnalyticsRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Analytics service implementation. All aggregation is performed at the SQL level —
- * this class only maps the native query results (Object[]) to typed DTOs.
- * No rows are pulled into Java for in-memory aggregation.
- */
 @Service
 @RequiredArgsConstructor
 public class AnalyticsServiceImpl implements AnalyticsService {
@@ -28,126 +24,101 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SalaryStatsByGroupDto> getSalaryStatsByCountry() {
-        List<Object[]> statsRows = analyticsRepository.findSalaryStatsByCountry();
-        List<Object[]> medianRows = analyticsRepository.findMedianSalaryByCountry();
+    public List<SalaryByCountryDto> getSalaryByCountry() {
+        List<AnalyticsRepository.SalaryAggregationProjection> stats = analyticsRepository.findSalaryByCountryStats();
+        List<AnalyticsRepository.MedianProjection> medians = analyticsRepository.findMedianSalaryByCountry();
 
-        // Build a lookup map: group -> median
         Map<String, BigDecimal> medianMap = new HashMap<>();
-        for (Object[] row : medianRows) {
-            String group = (String) row[0];
-            BigDecimal median = toBigDecimal(row[1]);
-            medianMap.put(group, median);
+        for (AnalyticsRepository.MedianProjection m : medians) {
+            medianMap.put(m.getGroupKey(), m.getMedianSalary());
         }
 
-        List<SalaryStatsByGroupDto> results = new ArrayList<>();
-        for (Object[] row : statsRows) {
-            String group = (String) row[0];
-            long count = toLong(row[1]);
-            BigDecimal avg = toBigDecimal(row[2]);
-            BigDecimal min = toBigDecimal(row[3]);
-            BigDecimal max = toBigDecimal(row[4]);
-            BigDecimal median = medianMap.getOrDefault(group, BigDecimal.ZERO);
-
-            results.add(SalaryStatsByGroupDto.builder()
-                    .group(group)
-                    .count(count)
-                    .avgSalaryUsd(avg.setScale(2, RoundingMode.HALF_UP))
-                    .medianSalaryUsd(median.setScale(2, RoundingMode.HALF_UP))
-                    .minSalaryUsd(min.setScale(2, RoundingMode.HALF_UP))
-                    .maxSalaryUsd(max.setScale(2, RoundingMode.HALF_UP))
+        List<SalaryByCountryDto> result = new ArrayList<>();
+        for (AnalyticsRepository.SalaryAggregationProjection s : stats) {
+            result.add(SalaryByCountryDto.builder()
+                    .country(s.getGroupKey())
+                    .currency(s.getCurrency())
+                    .employeeCount(s.getEmpCount() != null ? s.getEmpCount() : 0L)
+                    .avgSalaryUsd(s.getAvgSalary() != null ? s.getAvgSalary() : BigDecimal.ZERO)
+                    .medianSalaryUsd(medianMap.getOrDefault(s.getGroupKey(), s.getAvgSalary() != null ? s.getAvgSalary() : BigDecimal.ZERO))
+                    .minSalaryUsd(s.getMinSalary() != null ? s.getMinSalary() : BigDecimal.ZERO)
+                    .maxSalaryUsd(s.getMaxSalary() != null ? s.getMaxSalary() : BigDecimal.ZERO)
                     .build());
         }
-        return results;
+
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<SalaryStatsByGroupDto> getSalaryStatsByDepartment() {
-        List<Object[]> statsRows = analyticsRepository.findSalaryStatsByDepartment();
-        List<Object[]> medianRows = analyticsRepository.findMedianSalaryByDepartment();
+    public List<SalaryByDepartmentDto> getSalaryByDepartment() {
+        List<AnalyticsRepository.SalaryAggregationProjection> stats = analyticsRepository.findSalaryByDepartmentStats();
+        List<AnalyticsRepository.MedianProjection> medians = analyticsRepository.findMedianSalaryByDepartment();
 
         Map<String, BigDecimal> medianMap = new HashMap<>();
-        for (Object[] row : medianRows) {
-            String group = (String) row[0];
-            BigDecimal median = toBigDecimal(row[1]);
-            medianMap.put(group, median);
+        for (AnalyticsRepository.MedianProjection m : medians) {
+            medianMap.put(m.getGroupKey(), m.getMedianSalary());
         }
 
-        List<SalaryStatsByGroupDto> results = new ArrayList<>();
-        for (Object[] row : statsRows) {
-            String group = (String) row[0];
-            long count = toLong(row[1]);
-            BigDecimal avg = toBigDecimal(row[2]);
-            BigDecimal min = toBigDecimal(row[3]);
-            BigDecimal max = toBigDecimal(row[4]);
-            BigDecimal median = medianMap.getOrDefault(group, BigDecimal.ZERO);
-
-            results.add(SalaryStatsByGroupDto.builder()
-                    .group(group)
-                    .count(count)
-                    .avgSalaryUsd(avg.setScale(2, RoundingMode.HALF_UP))
-                    .medianSalaryUsd(median.setScale(2, RoundingMode.HALF_UP))
-                    .minSalaryUsd(min.setScale(2, RoundingMode.HALF_UP))
-                    .maxSalaryUsd(max.setScale(2, RoundingMode.HALF_UP))
+        List<SalaryByDepartmentDto> result = new ArrayList<>();
+        for (AnalyticsRepository.SalaryAggregationProjection s : stats) {
+            result.add(SalaryByDepartmentDto.builder()
+                    .department(s.getGroupKey())
+                    .employeeCount(s.getEmpCount() != null ? s.getEmpCount() : 0L)
+                    .avgSalaryUsd(s.getAvgSalary() != null ? s.getAvgSalary() : BigDecimal.ZERO)
+                    .medianSalaryUsd(medianMap.getOrDefault(s.getGroupKey(), s.getAvgSalary() != null ? s.getAvgSalary() : BigDecimal.ZERO))
+                    .minSalaryUsd(s.getMinSalary() != null ? s.getMinSalary() : BigDecimal.ZERO)
+                    .maxSalaryUsd(s.getMaxSalary() != null ? s.getMaxSalary() : BigDecimal.ZERO)
                     .build());
         }
-        return results;
+
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<HeadcountByCountryDto> getHeadcountByCountry() {
-        List<Object[]> rows = analyticsRepository.findHeadcountByCountry();
-        List<HeadcountByCountryDto> results = new ArrayList<>();
-        for (Object[] row : rows) {
-            results.add(HeadcountByCountryDto.builder()
-                    .country((String) row[0])
-                    .count(toLong(row[1]))
+        List<AnalyticsRepository.HeadcountProjection> list = analyticsRepository.findHeadcountByCountry();
+
+        long totalHeadcount = list.stream()
+                .mapToLong(p -> p.getHeadcount() != null ? p.getHeadcount() : 0L)
+                .sum();
+
+        List<HeadcountByCountryDto> result = new ArrayList<>();
+        for (AnalyticsRepository.HeadcountProjection p : list) {
+            long count = p.getHeadcount() != null ? p.getHeadcount() : 0L;
+            double percentage = totalHeadcount > 0 ? (double) count / totalHeadcount * 100.0 : 0.0;
+            BigDecimal roundedPercentage = BigDecimal.valueOf(percentage).setScale(2, RoundingMode.HALF_UP);
+
+            result.add(HeadcountByCountryDto.builder()
+                    .country(p.getCountry())
+                    .headcount(count)
+                    .percentage(roundedPercentage.doubleValue())
                     .build());
         }
-        return results;
+
+        return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public TotalPayrollDto getTotalPayroll() {
-        Object[] totalRow = analyticsRepository.findTotalPayroll();
-        BigDecimal totalUsd = toBigDecimal(totalRow[0]);
-        long totalCount = toLong(totalRow[1]);
+        AnalyticsRepository.TotalPayrollProjection total = analyticsRepository.findTotalPayroll();
+        List<AnalyticsRepository.CountryPayrollProjection> breakdown = analyticsRepository.findPayrollBreakdownByCountry();
 
-        List<Object[]> countryRows = analyticsRepository.findPayrollByCountry();
-        List<TotalPayrollDto.CountryPayroll> breakdown = new ArrayList<>();
-        for (Object[] row : countryRows) {
-            breakdown.add(TotalPayrollDto.CountryPayroll.builder()
-                    .country((String) row[0])
-                    .count(toLong(row[1]))
-                    .payrollUsd(toBigDecimal(row[2]).setScale(2, RoundingMode.HALF_UP))
+        List<TotalPayrollDto.CountryPayrollDto> countryBreakdown = new ArrayList<>();
+        for (AnalyticsRepository.CountryPayrollProjection c : breakdown) {
+            countryBreakdown.add(TotalPayrollDto.CountryPayrollDto.builder()
+                    .country(c.getCountry())
+                    .totalPayrollUsd(c.getTotalPayroll() != null ? c.getTotalPayroll() : BigDecimal.ZERO)
+                    .employeeCount(c.getEmployeeCount() != null ? c.getEmployeeCount() : 0L)
                     .build());
         }
 
         return TotalPayrollDto.builder()
-                .totalPayrollUsd(totalUsd.setScale(2, RoundingMode.HALF_UP))
-                .totalEmployees(totalCount)
-                .baseCurrency("USD")
-                .byCountry(breakdown)
+                .totalPayrollUsd(total != null && total.getTotalPayroll() != null ? total.getTotalPayroll() : BigDecimal.ZERO)
+                .totalEmployees(total != null && total.getTotalEmployees() != null ? total.getTotalEmployees() : 0L)
+                .countryBreakdown(countryBreakdown)
                 .build();
-    }
-
-    // ─── Helper methods for safe type conversion from native query results ──
-
-    private BigDecimal toBigDecimal(Object value) {
-        if (value == null) return BigDecimal.ZERO;
-        if (value instanceof BigDecimal) return (BigDecimal) value;
-        if (value instanceof Number) return BigDecimal.valueOf(((Number) value).doubleValue());
-        return new BigDecimal(value.toString());
-    }
-
-    private long toLong(Object value) {
-        if (value == null) return 0L;
-        if (value instanceof Long) return (Long) value;
-        if (value instanceof Integer) return ((Integer) value).longValue();
-        if (value instanceof BigDecimal) return ((BigDecimal) value).longValue();
-        return Long.parseLong(value.toString());
     }
 }

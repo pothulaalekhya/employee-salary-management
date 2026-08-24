@@ -5,131 +5,146 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Repository for pay analytics queries. All aggregation is done at the SQL level,
- * joining employee to exchange_rate on currency code and converting to base currency (USD)
- * via: employee.current_salary * exchange_rate.rate_to_base.
- *
- * No rows are pulled into Java for in-memory aggregation.
- */
 @Repository
 public interface AnalyticsRepository extends JpaRepository<Employee, Long> {
 
-    // ─── salary-by-country: avg, min, max (SQL-level) ───────────────────
-    @Query(value =
-            "SELECT e.country AS grp, " +
-            "       COUNT(*) AS cnt, " +
-            "       AVG(e.current_salary * er.rate_to_base) AS avg_usd, " +
-            "       MIN(e.current_salary * er.rate_to_base) AS min_usd, " +
-            "       MAX(e.current_salary * er.rate_to_base) AS max_usd " +
-            "FROM employee e " +
-            "JOIN exchange_rate er ON e.currency = er.currency_code " +
-            "WHERE e.active = true " +
-            "GROUP BY e.country " +
-            "ORDER BY e.country",
-            nativeQuery = true)
-    List<Object[]> findSalaryStatsByCountry();
+    interface SalaryAggregationProjection {
+        String getGroupKey();
+        String getCurrency();
+        Long getEmpCount();
+        BigDecimal getAvgSalary();
+        BigDecimal getMinSalary();
+        BigDecimal getMaxSalary();
+    }
 
-    // ─── salary-by-department: avg, min, max (SQL-level) ────────────────
-    @Query(value =
-            "SELECT e.department AS grp, " +
-            "       COUNT(*) AS cnt, " +
-            "       AVG(e.current_salary * er.rate_to_base) AS avg_usd, " +
-            "       MIN(e.current_salary * er.rate_to_base) AS min_usd, " +
-            "       MAX(e.current_salary * er.rate_to_base) AS max_usd " +
-            "FROM employee e " +
-            "JOIN exchange_rate er ON e.currency = er.currency_code " +
-            "WHERE e.active = true " +
-            "GROUP BY e.department " +
-            "ORDER BY e.department",
-            nativeQuery = true)
-    List<Object[]> findSalaryStatsByDepartment();
+    interface MedianProjection {
+        String getGroupKey();
+        BigDecimal getMedianSalary();
+    }
 
-    /**
-     * Median salary (converted to USD) per country using a window-function approach.
-     *
-     * MySQL has no built-in MEDIAN() aggregate. The technique used here:
-     *   1. For each country group, assign a row number (rn) and count (cnt) to each
-     *      employee's converted salary via ROW_NUMBER() OVER (PARTITION BY country ORDER BY converted_salary).
-     *   2. The median row(s) are those where rn = FLOOR((cnt+1)/2) or rn = FLOOR((cnt+2)/2).
-     *      - For an odd count N, both formulas yield the same row ((N+1)/2), giving one value.
-     *      - For an even count N, they yield N/2 and N/2+1, and we average those two.
-     *   3. AVG() over the selected row(s) gives the correct median for both odd and even counts.
-     *
-     * This is a standard "two-middle-rows" approach widely used in MySQL.
+    interface HeadcountProjection {
+        String getCountry();
+        Long getHeadcount();
+    }
+
+    interface TotalPayrollProjection {
+        BigDecimal getTotalPayroll();
+        Long getTotalEmployees();
+    }
+
+    interface CountryPayrollProjection {
+        String getCountry();
+        BigDecimal getTotalPayroll();
+        Long getEmployeeCount();
+    }
+
+    @Query(value = """
+            SELECT e.country AS groupKey,
+                   e.currency AS currency,
+                   COUNT(e.id) AS empCount,
+                   ROUND(AVG(e.current_salary * er.rate_to_base), 2) AS avgSalary,
+                   ROUND(MIN(e.current_salary * er.rate_to_base), 2) AS minSalary,
+                   ROUND(MAX(e.current_salary * er.rate_to_base), 2) AS maxSalary
+            FROM employee e
+            JOIN exchange_rate er ON e.currency = er.currency_code
+            WHERE e.active = true
+            GROUP BY e.country, e.currency
+            ORDER BY e.country
+            """, nativeQuery = true)
+    List<SalaryAggregationProjection> findSalaryByCountryStats();
+
+    /*
+     * SQL MEDIAN CALCULATION TECHNIQUE:
+     * MySQL 8.0+ and H2 2.x support window functions and Common Table Expressions (CTE).
+     * To compute the exact median without pulling all rows into JVM memory:
+     * 1. Assign a row number ordered by converted USD salary per partition (country).
+     * 2. Compute the total count per partition.
+     * 3. Filter rows matching the 1-based middle index:
+     *    - For odd count N: FLOOR((N+1)/2) == CEIL((N+1)/2), selecting the single median row.
+     *    - For even count N: FLOOR((N+1)/2) and CEIL((N+1)/2) select the two middle rows, and AVG() computes their midpoint.
      */
-    @Query(value =
-            "SELECT ranked.country AS grp, AVG(ranked.converted_salary) AS median_usd " +
-            "FROM ( " +
-            "    SELECT e.country, " +
-            "           e.current_salary * er.rate_to_base AS converted_salary, " +
-            "           ROW_NUMBER() OVER (PARTITION BY e.country ORDER BY e.current_salary * er.rate_to_base) AS rn, " +
-            "           COUNT(*) OVER (PARTITION BY e.country) AS cnt " +
-            "    FROM employee e " +
-            "    JOIN exchange_rate er ON e.currency = er.currency_code " +
-            "    WHERE e.active = true " +
-            ") ranked " +
-            "WHERE ranked.rn = FLOOR((ranked.cnt + 1) / 2) " +
-            "   OR ranked.rn = FLOOR((ranked.cnt + 2) / 2) " +
-            "GROUP BY ranked.country " +
-            "ORDER BY ranked.country",
-            nativeQuery = true)
-    List<Object[]> findMedianSalaryByCountry();
+    @Query(value = """
+            WITH ranked AS (
+                SELECT e.country AS group_key,
+                       (e.current_salary * er.rate_to_base) AS converted_salary,
+                       ROW_NUMBER() OVER (PARTITION BY e.country ORDER BY (e.current_salary * er.rate_to_base)) AS row_num,
+                       COUNT(*) OVER (PARTITION BY e.country) AS total_count
+                FROM employee e
+                JOIN exchange_rate er ON e.currency = er.currency_code
+                WHERE e.active = true
+            )
+            SELECT group_key AS groupKey,
+                   ROUND(AVG(converted_salary), 2) AS medianSalary
+            FROM ranked
+            WHERE row_num IN (FLOOR((total_count + 1.0) / 2.0), CEIL((total_count + 1.0) / 2.0))
+            GROUP BY group_key
+            """, nativeQuery = true)
+    List<MedianProjection> findMedianSalaryByCountry();
 
-    /**
-     * Median salary (converted to USD) per department — same window-function technique
-     * as findMedianSalaryByCountry(), partitioned by department instead.
-     */
-    @Query(value =
-            "SELECT ranked.department AS grp, AVG(ranked.converted_salary) AS median_usd " +
-            "FROM ( " +
-            "    SELECT e.department, " +
-            "           e.current_salary * er.rate_to_base AS converted_salary, " +
-            "           ROW_NUMBER() OVER (PARTITION BY e.department ORDER BY e.current_salary * er.rate_to_base) AS rn, " +
-            "           COUNT(*) OVER (PARTITION BY e.department) AS cnt " +
-            "    FROM employee e " +
-            "    JOIN exchange_rate er ON e.currency = er.currency_code " +
-            "    WHERE e.active = true " +
-            ") ranked " +
-            "WHERE ranked.rn = FLOOR((ranked.cnt + 1) / 2) " +
-            "   OR ranked.rn = FLOOR((ranked.cnt + 2) / 2) " +
-            "GROUP BY ranked.department " +
-            "ORDER BY ranked.department",
-            nativeQuery = true)
-    List<Object[]> findMedianSalaryByDepartment();
+    @Query(value = """
+            SELECT e.department AS groupKey,
+                   '' AS currency,
+                   COUNT(e.id) AS empCount,
+                   ROUND(AVG(e.current_salary * er.rate_to_base), 2) AS avgSalary,
+                   ROUND(MIN(e.current_salary * er.rate_to_base), 2) AS minSalary,
+                   ROUND(MAX(e.current_salary * er.rate_to_base), 2) AS maxSalary
+            FROM employee e
+            JOIN exchange_rate er ON e.currency = er.currency_code
+            WHERE e.active = true
+            GROUP BY e.department
+            ORDER BY e.department
+            """, nativeQuery = true)
+    List<SalaryAggregationProjection> findSalaryByDepartmentStats();
 
-    // ─── headcount-by-country ───────────────────────────────────────────
-    @Query(value =
-            "SELECT e.country, COUNT(*) AS cnt " +
-            "FROM employee e " +
-            "WHERE e.active = true " +
-            "GROUP BY e.country " +
-            "ORDER BY e.country",
-            nativeQuery = true)
-    List<Object[]> findHeadcountByCountry();
+    @Query(value = """
+            WITH ranked AS (
+                SELECT e.department AS group_key,
+                       (e.current_salary * er.rate_to_base) AS converted_salary,
+                       ROW_NUMBER() OVER (PARTITION BY e.department ORDER BY (e.current_salary * er.rate_to_base)) AS row_num,
+                       COUNT(*) OVER (PARTITION BY e.department) AS total_count
+                FROM employee e
+                JOIN exchange_rate er ON e.currency = er.currency_code
+                WHERE e.active = true
+            )
+            SELECT group_key AS groupKey,
+                   ROUND(AVG(converted_salary), 2) AS medianSalary
+            FROM ranked
+            WHERE row_num IN (FLOOR((total_count + 1.0) / 2.0), CEIL((total_count + 1.0) / 2.0))
+            GROUP BY group_key
+            """, nativeQuery = true)
+    List<MedianProjection> findMedianSalaryByDepartment();
 
-    // ─── total-payroll org-wide ─────────────────────────────────────────
-    @Query(value =
-            "SELECT SUM(e.current_salary * er.rate_to_base) AS total_usd, " +
-            "       COUNT(*) AS cnt " +
-            "FROM employee e " +
-            "JOIN exchange_rate er ON e.currency = er.currency_code " +
-            "WHERE e.active = true",
-            nativeQuery = true)
-    Object[] findTotalPayroll();
+    @Query(value = """
+            SELECT e.country AS country,
+                   COUNT(e.id) AS headcount
+            FROM employee e
+            WHERE e.active = true
+            GROUP BY e.country
+            ORDER BY headcount DESC, e.country ASC
+            """, nativeQuery = true)
+    List<HeadcountProjection> findHeadcountByCountry();
 
-    // ─── total-payroll breakdown by country ─────────────────────────────
-    @Query(value =
-            "SELECT e.country, " +
-            "       COUNT(*) AS cnt, " +
-            "       SUM(e.current_salary * er.rate_to_base) AS payroll_usd " +
-            "FROM employee e " +
-            "JOIN exchange_rate er ON e.currency = er.currency_code " +
-            "WHERE e.active = true " +
-            "GROUP BY e.country " +
-            "ORDER BY e.country",
-            nativeQuery = true)
-    List<Object[]> findPayrollByCountry();
+    @Query(value = """
+            SELECT ROUND(COALESCE(SUM(e.current_salary * er.rate_to_base), 0), 2) AS totalPayroll,
+                   COUNT(e.id) AS totalEmployees
+            FROM employee e
+            JOIN exchange_rate er ON e.currency = er.currency_code
+            WHERE e.active = true
+            """, nativeQuery = true)
+    TotalPayrollProjection findTotalPayroll();
+
+    @Query(value = """
+            SELECT e.country AS country,
+                   ROUND(COALESCE(SUM(e.current_salary * er.rate_to_base), 0), 2) AS totalPayroll,
+                   COUNT(e.id) AS employeeCount
+            FROM employee e
+            JOIN exchange_rate er ON e.currency = er.currency_code
+            WHERE e.active = true
+            GROUP BY e.country
+            ORDER BY totalPayroll DESC
+            """, nativeQuery = true)
+    List<CountryPayrollProjection> findPayrollBreakdownByCountry();
 }

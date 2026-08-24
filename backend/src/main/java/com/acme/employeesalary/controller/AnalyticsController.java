@@ -1,7 +1,8 @@
 package com.acme.employeesalary.controller;
 
 import com.acme.employeesalary.dto.HeadcountByCountryDto;
-import com.acme.employeesalary.dto.SalaryStatsByGroupDto;
+import com.acme.employeesalary.dto.SalaryByCountryDto;
+import com.acme.employeesalary.dto.SalaryByDepartmentDto;
 import com.acme.employeesalary.dto.TotalPayrollDto;
 import com.acme.employeesalary.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
@@ -22,22 +23,22 @@ public class AnalyticsController {
     private final AnalyticsService analyticsService;
 
     @GetMapping("/salary-by-country")
-    public ResponseEntity<List<SalaryStatsByGroupDto>> salaryByCountry() {
-        return ResponseEntity.ok(analyticsService.getSalaryStatsByCountry());
+    public ResponseEntity<List<SalaryByCountryDto>> getSalaryByCountry() {
+        return ResponseEntity.ok(analyticsService.getSalaryByCountry());
     }
 
     @GetMapping("/salary-by-department")
-    public ResponseEntity<List<SalaryStatsByGroupDto>> salaryByDepartment() {
-        return ResponseEntity.ok(analyticsService.getSalaryStatsByDepartment());
+    public ResponseEntity<List<SalaryByDepartmentDto>> getSalaryByDepartment() {
+        return ResponseEntity.ok(analyticsService.getSalaryByDepartment());
     }
 
     @GetMapping("/headcount-by-country")
-    public ResponseEntity<List<HeadcountByCountryDto>> headcountByCountry() {
+    public ResponseEntity<List<HeadcountByCountryDto>> getHeadcountByCountry() {
         return ResponseEntity.ok(analyticsService.getHeadcountByCountry());
     }
 
     @GetMapping("/total-payroll")
-    public ResponseEntity<TotalPayrollDto> totalPayroll() {
+    public ResponseEntity<TotalPayrollDto> getTotalPayroll() {
         return ResponseEntity.ok(analyticsService.getTotalPayroll());
     }
 }

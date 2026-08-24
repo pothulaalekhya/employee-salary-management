@@ -8,10 +8,6 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Response DTO for total payroll analytics: org-wide total in base currency (USD)
- * plus a per-country breakdown.
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,16 +15,15 @@ import java.util.List;
 public class TotalPayrollDto {
     private BigDecimal totalPayrollUsd;
     private long totalEmployees;
-    private String baseCurrency;
-    private List<CountryPayroll> byCountry;
+    private List<CountryPayrollDto> countryBreakdown;
 
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class CountryPayroll {
+    public static class CountryPayrollDto {
         private String country;
-        private long count;
-        private BigDecimal payrollUsd;
+        private BigDecimal totalPayrollUsd;
+        private long employeeCount;
     }
 }
