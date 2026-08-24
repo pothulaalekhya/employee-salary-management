@@ -1,0 +1,44 @@
+<div class="app-layout">
+  <header class="app-nav">
+    <div class="nav-brand">
+      <mat-icon class="brand-icon">payments</mat-icon>
+      <span class="brand-name font-heading">ACME Salary Management</span>
+    </div>
+    <div class="nav-status">
+      <span class="status-badge" [class.online]="backendStatus() === 'online'" [class.offline]="backendStatus() !== 'online'">
+        <span class="dot"></span>
+        API: {{ backendStatus() | uppercase }} (Port 8081)
+      </span>
+    </div>
+  </header>
+
+  <main class="app-content">
+    <div class="placeholder-container">
+      <div class="placeholder-card">
+        <mat-icon class="placeholder-icon">dns</mat-icon>
+        <h2 class="font-heading">Employee Salary Management System</h2>
+        <p class="subtitle">System scaffolded and connected to MySQL database.</p>
+        
+        <div class="health-check-box">
+          <div class="health-item">
+            <span class="label">Backend Status:</span>
+            <span class="value" [class.ok]="backendStatus() === 'online'">
+              {{ backendStatus() === 'online' ? 'Connected (/api/health OK)' : 'Checking / Disconnected' }}
+            </span>
+          </div>
+          <div class="health-item">
+            <span class="label">Database:</span>
+            <span class="value ok">MySQL 8.0 (salary_db)</span>
+          </div>
+        </div>
+
+        <button mat-flat-button color="primary" (click)="checkBackendHealth()">
+          <mat-icon>refresh</mat-icon>
+          Re-check API Health
+        </button>
+      </div>
+
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>

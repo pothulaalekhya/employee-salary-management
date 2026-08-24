@@ -18,19 +18,27 @@ needs to look at aggregate pay data, not just individual records.
 - **Salary history**: track changes over time (who changed what, when) rather
   than overwriting — this is core to "how the org pays people" being answerable
   later, and to auditability, which any real HR system needs.
-- **Basic analytics/reporting**: average/median salary by country and by
-  department; headcount and total pay by country. This is the "answer
-  questions about how the org pays people" requirement.
-- **Multi-currency support**: store currency alongside salary; do not force a
-  single-currency conversion (see Out of Scope).
+- **Analytics dashboard**: predefined KPI cards (total payroll, average/
+  median pay by department or country, headcount) plus visual charts, with
+  interactive filters (by country/department). Confirmed with Incubyte —
+  an open-ended ad-hoc query interface is explicitly not expected; a
+  well-built predefined dashboard is the target.
+- **Multi-currency support**: store each employee's salary in their native
+  local currency (first-class property), and additionally convert to a
+  single base reporting currency (e.g. USD) using a fixed exchange-rate
+  table, so org-wide aggregates are meaningful. Confirmed with Incubyte via
+  clarifying question — this is the intended balance between local accuracy
+  and org-wide comparability.
 - **Seed data**: script to generate 10,000 realistic employee records across
   several countries/departments for demo and load-realism.
 
 ## Deliberately Out of Scope (v1)
-- **Live currency conversion / FX rates** — real-time FX adds an external
-  dependency and doesn't change the core CRUD/analytics story; showing salary
-  in native currency is more honest for HR data anyway. Could be a v2 feature
-  behind a pluggable FX-rate service.
+- **Live/real-time FX rates** — a fixed, seeded exchange-rate table is used
+  for base-currency conversion (per Incubyte's clarification) rather than
+  calling a live FX API; this avoids an external dependency and keeps
+  conversions deterministic/testable, at the cost of not reflecting
+  real-time rate fluctuations. A pluggable live-rate service is a natural
+  v2 extension point.
 - **Payroll processing / tax calculation / disbursement** — this is a salary
   *management* tool, not a payroll engine. Payroll math varies wildly by
   country and is its own product.
@@ -45,9 +53,24 @@ needs to look at aggregate pay data, not just individual records.
   ("everything managed via Excel"), but adds file-parsing/validation scope
   that competes with core CRUD + analytics for the time budget. Called out
   as the top v2 candidate.
-- **Advanced BI/dashboards** (charts, drill-downs) — a handful of numeric
-  aggregates answers "how does the org pay people" without building a full
-  analytics UI.
+- **Drill-down/ad-hoc BI tooling** — Incubyte confirmed predefined KPI cards,
+  charts, and interactive filters are the expectation (not an open-ended
+  query builder), so the dashboard stays a fixed, well-designed set of
+  views rather than a general analytics tool.
+
+## Clarifications Received (from Incubyte, in response to submitted questions)
+- **Currency**: store native currency per employee (first-class) + convert
+  to a fixed base reporting currency via a static exchange-rate table for
+  org-wide aggregates. Trade-off: simpler and fully deterministic/testable,
+  but rates won't reflect real-time market fluctuations — acceptable for
+  this system's purpose (internal HR reporting, not financial trading).
+- **Analytics**: predefined KPI cards + charts + interactive filters
+  expected; no ad-hoc query interface needed.
+- **Deployment**: free-tier hosting (Vercel/Render/Railway) is acceptable;
+  a Docker Compose setup + demo video is an acceptable fallback if hosting
+  has friction.
+- **AI artifacts**: a summarized write-up of AI tool usage and prompt
+  strategy is sufficient; raw prompt logs are not required.
 
 ## Assumptions
 - One salary record can be "current" per employee, with a history log of

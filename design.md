@@ -70,6 +70,22 @@ entry, updated in the same transaction as the history insert.
 `salary_history(employee_id)` — these back the filter/search and history
 lookup queries.
 
+### `exchange_rate`
+| column          | type          | notes                              |
+|-----------------|---------------|-------------------------------------|
+| id              | BIGINT PK     |                                     |
+| currency_code   | VARCHAR(3)    | ISO code, e.g. "INR", "EUR"        |
+| rate_to_base    | DECIMAL(12,6) | multiply local amount by this to get base-currency value |
+| base_currency    | VARCHAR(3)    | e.g. "USD" — fixed constant for this system |
+| updated_at      | TIMESTAMP     |                                     |
+
+Added per Incubyte's clarification: employees store salary in their own
+native currency (first-class), and org-wide aggregates convert to a single
+base reporting currency (USD) using this fixed, seeded table — not a live
+FX API call. Simpler, deterministic, and easy to test; the trade-off is
+that rates don't reflect real-time markets, which is acceptable since this
+is internal HR reporting, not a financial system.
+
 ## API Endpoints (high level)
 
 ```
@@ -81,9 +97,10 @@ PATCH  /api/employees/{id}/salary        -> triggers history write
 DELETE /api/employees/{id}               -> soft delete (active=false)
 GET    /api/employees/{id}/salary-history
 
-GET    /api/analytics/salary-by-country
-GET    /api/analytics/salary-by-department
+GET    /api/analytics/salary-by-country       -> avg/median/min/max, in base currency
+GET    /api/analytics/salary-by-department    -> avg/median/min/max, in base currency
 GET    /api/analytics/headcount-by-country
+GET    /api/analytics/total-payroll            -> org-wide total, in base currency
 ```
 
 ## Analytics Approach
@@ -95,6 +112,17 @@ the database do what it's optimized for. Median needs a native query
 (MySQL doesn't have a built-in `MEDIAN()`, so this uses a windowed/percentile
 approach or a small native SQL trick — noted inline in code).
 
+Currency conversion to base currency happens at query time by joining
+against `exchange_rate` on `employee.currency`, rather than storing
+pre-converted values — this keeps `employee.current_salary` as the honest
+source of truth in native currency, and conversion logic in one place
+(easy to swap for a live FX service later without touching stored data).
+
+Per Incubyte's clarification, the frontend analytics view is a predefined
+dashboard: KPI cards (total payroll, avg/median pay, headcount) + charts
+(bar/pie by country and department) + interactive filters — not an
+open-ended query builder.
+
 ## Frontend Architecture
 
 ```
@@ -104,7 +132,8 @@ src/app/
     employee-list/       -> paginated table, search/filter bar
     employee-detail/     -> view/edit single employee, salary update form
   analytics/
-    analytics-dashboard/ -> summary cards/tables from analytics endpoints
+    analytics-dashboard/ -> KPI cards + charts (ng2-charts/Chart.js) +
+                             interactive filters, from analytics endpoints
   shared/
     pipes/                -> e.g. currency-format pipe (per-currency, not
                              hardcoded to one locale)

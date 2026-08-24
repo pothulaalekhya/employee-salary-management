@@ -53,6 +53,9 @@ bazel-out/
 .env.development.local
 .env.test.local
 .env.production.local
+application-local.properties
+*.local.properties
+
 
 # IDEs and editors
 .idea/
