@@ -10,7 +10,7 @@ Designed to replace legacy spreadsheet workflows for a **10,000-employee global 
 - **Live Frontend (Vercel)**: [https://employee-salary-management-six.vercel.app](https://employee-salary-management-six.vercel.app)
 - **Live Backend API (Render)**: [https://employee-salary-backend-x7u4.onrender.com/api/health](https://employee-salary-backend-x7u4.onrender.com/api/health)
 - **Cloud Database**: Managed MySQL 8.0 on Aiven (10,000 active employee records)
-- **Demo Video Walkthrough**: `[Pending Recording - Video Link will be added here]`
+- **Demo Video Walkthrough**: [Watch Demo Video (Google Drive)](https://drive.google.com/file/d/1atYArE2jrnSDT5UmzpHNIoE9bcwdd2JW/view?usp=sharing)
 
 ---
 
