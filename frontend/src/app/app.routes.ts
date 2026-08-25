@@ -19,5 +19,12 @@ export const routes: Routes = [
       import('./components/employee-detail/employee-detail.component').then(
         m => m.EmployeeDetailComponent
       )
+  },
+  {
+    path: 'analytics',
+    loadComponent: () =>
+      import('./components/analytics-dashboard/analytics-dashboard.component').then(
+        m => m.AnalyticsDashboardComponent
+      )
   }
 ];

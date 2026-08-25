@@ -1,0 +1,254 @@
+<div class="analytics-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Executive Compensation & Headcount Analytics</h1>
+      <p class="page-subtitle">Multi-currency salary distributions normalized to reporting base currency (USD)</p>
+    </div>
+    <div class="header-controls">
+      <button mat-flat-button color="primary" (click)="loadAnalyticsData()" [disabled]="isLoading">
+        <mat-icon>refresh</mat-icon>
+        Refresh Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-state">
+      <mat-spinner diameter="56"></mat-spinner>
+      <h3>Calculating aggregated compensation metrics...</h3>
+      <p>Processing SQL query conversions across global employee records.</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (hasError && !isLoading) {
+    <mat-card class="error-card">
+      <mat-icon color="warn">error_outline</mat-icon>
+      <div class="error-content">
+        <h3>Unable to Load Analytics</h3>
+        <p>{{ errorMessage }}</p>
+      </div>
+      <button mat-stroked-button color="warn" (click)="loadAnalyticsData()">Retry</button>
+    </mat-card>
+  }
+
+  @if (!isLoading && !hasError) {
+    <!-- 1. KPI Cards Grid -->
+    <div class="kpi-grid">
+      <!-- Total Payroll -->
+      <mat-card class="kpi-card payroll-kpi">
+        <div class="kpi-icon-wrap">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Total Annual Payroll (USD)</span>
+          <h2 class="kpi-value">${{ totalPayrollUsd | number: '1.2-2' }}</h2>
+          <span class="kpi-subtext">Across all active international entities</span>
+        </div>
+      </mat-card>
+
+      <!-- Total Headcount -->
+      <mat-card class="kpi-card headcount-kpi">
+        <div class="kpi-icon-wrap">
+          <mat-icon>groups</mat-icon>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Active Headcount</span>
+          <h2 class="kpi-value">{{ totalHeadcount | number }}</h2>
+          <span class="kpi-subtext">Across 8 countries & 6 departments</span>
+        </div>
+      </mat-card>
+
+      <!-- Average Salary -->
+      <mat-card class="kpi-card avg-kpi">
+        <div class="kpi-icon-wrap">
+          <mat-icon>trending_up</mat-icon>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Org-Wide Average Salary (USD)</span>
+          <h2 class="kpi-value">${{ averageSalaryUsd | number: '1.2-2' }}</h2>
+          <span class="kpi-subtext">Weighted mean compensation</span>
+        </div>
+      </mat-card>
+
+      <!-- Median Salary -->
+      <mat-card class="kpi-card median-kpi">
+        <div class="kpi-icon-wrap">
+          <mat-icon>insights</mat-icon>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">Org-Wide Median Salary (USD)</span>
+          <h2 class="kpi-value">${{ medianSalaryUsd | number: '1.2-2' }}</h2>
+          <span class="kpi-subtext">50th percentile baseline</span>
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- 2. Interactive Filter Toolbar -->
+    <mat-card class="filter-toolbar-card">
+      <div class="filter-toolbar-inner">
+        <div class="filter-heading">
+          <mat-icon>tune</mat-icon>
+          <span>Interactive Visual Filters:</span>
+        </div>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="toolbar-select">
+          <mat-label>Filter Country</mat-label>
+          <mat-select [(ngModel)]="selectedCountry" (selectionChange)="onCountryFilterChange($event.value)">
+            <mat-option value="ALL">All Countries (8)</mat-option>
+            @for (c of countries; track c) {
+              <mat-option [value]="c">{{ c }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="toolbar-select">
+          <mat-label>Filter Department</mat-label>
+          <mat-select [(ngModel)]="selectedDepartment" (selectionChange)="onDepartmentFilterChange($event.value)">
+            <mat-option value="ALL">All Departments (6)</mat-option>
+            @for (d of departments; track d) {
+              <mat-option [value]="d">{{ d }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (selectedCountry !== 'ALL' || selectedDepartment !== 'ALL') {
+          <button mat-button color="warn" (click)="resetFilters()">
+            <mat-icon>clear</mat-icon>
+            Reset Filters
+          </button>
+        }
+      </div>
+    </mat-card>
+
+    <!-- 3. Charts Section -->
+    <div class="charts-grid">
+      <!-- Chart 1: Salary by Country -->
+      <mat-card class="chart-card country-chart-card">
+        <div class="chart-header">
+          <div>
+            <h3 class="chart-title">Average vs. Median Salary by Country (USD)</h3>
+            <p class="chart-subtitle">Converted from native local currency at query time</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas
+            baseChart
+            [data]="countryChartData"
+            [options]="countryChartOptions"
+            [type]="countryChartType"
+          ></canvas>
+        </div>
+      </mat-card>
+
+      <!-- Chart 2: Headcount by Country -->
+      <mat-card class="chart-card headcount-chart-card">
+        <div class="chart-header">
+          <div>
+            <h3 class="chart-title">Global Headcount Distribution</h3>
+            <p class="chart-subtitle">Employee representation by country</p>
+          </div>
+        </div>
+        <div class="chart-container doughnut-container">
+          <canvas
+            baseChart
+            [data]="headcountChartData"
+            [options]="headcountChartOptions"
+            [type]="headcountChartType"
+          ></canvas>
+        </div>
+      </mat-card>
+
+      <!-- Chart 3: Salary by Department -->
+      <mat-card class="chart-card full-width-chart">
+        <div class="chart-header">
+          <div>
+            <h3 class="chart-title">Department Compensation Comparison (USD)</h3>
+            <p class="chart-subtitle">Average & Median base pay across organizational departments</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas
+            baseChart
+            [data]="departmentChartData"
+            [options]="departmentChartOptions"
+            [type]="departmentChartType"
+          ></canvas>
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- 4. Detailed Breakdown Data Table -->
+    <mat-card class="breakdown-table-card">
+      <div class="table-header">
+        <h3 class="chart-title">Country Breakdown Detail Table</h3>
+        <p class="chart-subtitle">Summary metrics in USD reporting currency</p>
+      </div>
+
+      <div class="table-responsive">
+        <table mat-table [dataSource]="filteredCountryTableData" class="analytics-table">
+          <!-- Country Column -->
+          <ng-container matColumnDef="country">
+            <th mat-header-cell *matHeaderCellDef>Country</th>
+            <td mat-cell *matCellDef="let row">
+              <strong>{{ row.country }}</strong>
+            </td>
+          </ng-container>
+
+          <!-- Currency Column -->
+          <ng-container matColumnDef="currency">
+            <th mat-header-cell *matHeaderCellDef>Native FX</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="currency-tag">{{ row.currency }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Employee Count Column -->
+          <ng-container matColumnDef="employeeCount">
+            <th mat-header-cell *matHeaderCellDef class="center-col">Headcount</th>
+            <td mat-cell *matCellDef="let row" class="center-col">
+              <span class="count-pill">{{ row.employeeCount | number }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Avg Salary Column -->
+          <ng-container matColumnDef="avgSalaryUsd">
+            <th mat-header-cell *matHeaderCellDef class="right-col">Average (USD)</th>
+            <td mat-cell *matCellDef="let row" class="right-col">
+              <strong class="text-primary">${{ row.avgSalaryUsd | number: '1.2-2' }}</strong>
+            </td>
+          </ng-container>
+
+          <!-- Median Salary Column -->
+          <ng-container matColumnDef="medianSalaryUsd">
+            <th mat-header-cell *matHeaderCellDef class="right-col">Median (USD)</th>
+            <td mat-cell *matCellDef="let row" class="right-col">
+              <strong class="text-success">${{ row.medianSalaryUsd | number: '1.2-2' }}</strong>
+            </td>
+          </ng-container>
+
+          <!-- Min Salary Column -->
+          <ng-container matColumnDef="minSalaryUsd">
+            <th mat-header-cell *matHeaderCellDef class="right-col">Min (USD)</th>
+            <td mat-cell *matCellDef="let row" class="right-col">
+              ${{ row.minSalaryUsd | number: '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- Max Salary Column -->
+          <ng-container matColumnDef="maxSalaryUsd">
+            <th mat-header-cell *matHeaderCellDef class="right-col">Max (USD)</th>
+            <td mat-cell *matCellDef="let row" class="right-col">
+              ${{ row.maxSalaryUsd | number: '1.2-2' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="tableColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: tableColumns"></tr>
+        </table>
+      </div>
+    </mat-card>
+  }
+</div>
