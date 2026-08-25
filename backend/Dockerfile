@@ -31,12 +31,8 @@ RUN chown -R appuser:appgroup /app
 
 USER appuser
 
-# Configurable environment variables with safe defaults (overridden at runtime / Compose)
-ENV SERVER_PORT=8081 \
-    DB_URL="" \
-    DB_USER="" \
-    DB_PASSWORD="" \
-    CORS_ALLOWED_ORIGINS="http://localhost:4200,http://localhost:80,http://127.0.0.1:4200"
+# Configurable runtime environment variables (overridden by Render / Compose)
+ENV CORS_ALLOWED_ORIGINS="http://localhost:4200,http://localhost:80,http://127.0.0.1:4200"
 
 EXPOSE 8081
 
