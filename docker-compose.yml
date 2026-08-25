@@ -1,0 +1,72 @@
+services:
+  # ============================================================================
+  # 1. MySQL 8 Database Service
+  # ============================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: salary-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: salary_db
+      MYSQL_USER: salary_user
+      MYSQL_PASSWORD: salary_secure_pass123!
+      MYSQL_ROOT_PASSWORD: root_secure_pass123!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secure_pass123!"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - salary-network
+
+  # ============================================================================
+  # 2. Spring Boot 3 Java 17 Backend Service
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: salary-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/salary_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USER: salary_user
+      DB_PASSWORD: salary_secure_pass123!
+      CORS_ALLOWED_ORIGINS: http://localhost:4200,http://localhost:80,http://127.0.0.1:4200
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    networks:
+      - salary-network
+
+  # ============================================================================
+  # 3. Angular 21 Frontend Service (Nginx Reverse Proxy & Static Host)
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: salary-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+    networks:
+      - salary-network
+
+volumes:
+  mysql_data:
+    name: salary_mysql_data
+
+networks:
+  salary-network:
+    driver: bridge

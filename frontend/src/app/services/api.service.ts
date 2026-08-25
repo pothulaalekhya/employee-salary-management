@@ -17,7 +17,26 @@ import {
 })
 export class ApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8081/api';
+
+  /**
+   * Resolves the backend base API URL:
+   * 1. Window runtime injection (__env.API_URL) if set.
+   * 2. When running in containerized production (via Nginx proxy): relative '/api'.
+   * 3. Default for local standalone development: 'http://localhost:8081/api'.
+   */
+  private get baseUrl(): string {
+    if (typeof window !== 'undefined') {
+      const windowEnv = (window as unknown as { __env?: { API_URL?: string } })?.__env;
+      if (windowEnv?.API_URL) {
+        return windowEnv.API_URL.replace(/\/+$/, '');
+      }
+      // If served via Nginx on standard port or container port other than dev 4200
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return '/api';
+      }
+    }
+    return 'http://localhost:8081/api';
+  }
 
   getHealth(): Observable<{ status: string }> {
     return this.http.get<{ status: string }>(`${this.baseUrl}/health`);
@@ -41,10 +60,10 @@ export class ApiService {
     if (params.name && params.name.trim()) {
       httpParams = httpParams.set('name', params.name.trim());
     }
-    if (params.page !== undefined) {
+    if (params.page !== undefined && params.page !== null) {
       httpParams = httpParams.set('page', params.page.toString());
     }
-    if (params.size !== undefined) {
+    if (params.size !== undefined && params.size !== null) {
       httpParams = httpParams.set('size', params.size.toString());
     }
     if (params.sort && params.sort.trim()) {
@@ -62,7 +81,7 @@ export class ApiService {
     return this.http.get<SalaryHistory[]>(`${this.baseUrl}/employees/${employeeId}/salary-history`);
   }
 
-  createEmployee(employee: Partial<Employee> & { initialSalary: number; note?: string }): Observable<Employee> {
+  createEmployee(employee: Partial<Employee> & { initialSalary: number; effectiveDate?: string; note?: string }): Observable<Employee> {
     return this.http.post<Employee>(`${this.baseUrl}/employees`, employee);
   }
 
@@ -70,15 +89,14 @@ export class ApiService {
     return this.http.put<Employee>(`${this.baseUrl}/employees/${id}`, employee);
   }
 
-  updateSalary(id: number, data: { newSalary: number; effectiveDate?: string; note?: string }): Observable<Employee> {
-    return this.http.patch<Employee>(`${this.baseUrl}/employees/${id}/salary`, data);
+  updateSalary(id: number, salaryUpdate: { newSalary: number; effectiveDate?: string; note?: string }): Observable<Employee> {
+    return this.http.patch<Employee>(`${this.baseUrl}/employees/${id}/salary`, salaryUpdate);
   }
 
   deleteEmployee(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/employees/${id}`);
   }
 
-  // Analytics Endpoints
   getSalaryByCountry(): Observable<SalaryByCountry[]> {
     return this.http.get<SalaryByCountry[]>(`${this.baseUrl}/analytics/salary-by-country`);
   }
