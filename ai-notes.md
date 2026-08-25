@@ -15,7 +15,28 @@
 
 ---
 
-## 2. Specific Course Corrections & Discrepancies Caught During Review
+## 2. Key Prompting Strategies & Prompt Patterns Used
+
+Rather than issuing open-ended generic requests, development was driven by structured, constraint-rich prompt engineering techniques:
+
+### 1. Stage-Gated Milestone Prompting
+- **Strategy**: Broke the entire project into 10 sequential, isolated stages (0 to 10). Each prompt specified strict boundaries: *"Build Stage N only. Do not touch or advance to Stage N+1 until Stage N passes all tests and verification."*
+- **Benefit**: Prevented AI hallucination, scope creep, and untested assumptions from propagating across layers.
+
+### 2. Specification & Constraint Injection
+- **Strategy**: Injected domain constraints directly into prompts (e.g. *"Use native SQL CTE Window Functions `ROW_NUMBER()` + `COUNT(*)` for calculating exact medians at the database level rather than loading all 10,000 entities into JVM memory"*).
+- **Benefit**: Guaranteed optimal O(1) memory footprint and native database execution.
+
+### 3. Verification-First & Test-Driven Directives
+- **Strategy**: Every prompt that introduced or modified code required accompanying unit/integration tests with explicit test assertions (e.g. testing `409 Conflict` on duplicate employee codes, `400 Bad Request` on negative salary, and `404 Not Found` on nonexistent IDs).
+- **Benefit**: Ensured 100% test pass rate across all 45 backend and 29 frontend test suites.
+
+### 4. Active Human-in-the-Loop Interventions & Counter-Prompting
+- **Strategy**: When AI generated superficial placeholders (e.g., a static "API Online" badge or an unhandled JSON parse exception), explicit correction prompts were issued to replace placeholders with real dynamic implementations.
+
+---
+
+## 3. Specific Course Corrections & Discrepancies Caught During Review
 
 Rather than blindly accepting generated code, active human-in-the-loop review identified and corrected several critical issues:
 
@@ -37,7 +58,7 @@ Rather than blindly accepting generated code, active human-in-the-loop review id
 
 ---
 
-## 3. Review & Verification Workflow
+## 4. Review & Verification Workflow
 
 The project followed a rigorous 4-step verification loop for every stage:
 
