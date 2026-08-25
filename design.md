@@ -108,9 +108,14 @@ Aggregates (avg/median/headcount/total) run as SQL `GROUP BY` queries
 (JPQL or native), not loaded into Java and computed in-memory. At 10,000
 rows this isn't strictly required for performance, but it's the correct
 default: it scales to much larger datasets without code changes, and lets
-the database do what it's optimized for. Median needs a native query
-(MySQL doesn't have a built-in `MEDIAN()`, so this uses a windowed/percentile
-approach or a small native SQL trick — noted inline in code).
+the database do what it's optimized for. 
+
+**Median SQL Technique**: Since MySQL has no built-in `MEDIAN()` function,
+medians are calculated via a native Common Table Expression (CTE) using
+window functions (`ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)` and
+`COUNT(*) OVER (PARTITION BY ...)`), selecting the midpoint indices
+(`FLOOR((total_count + 1.0)/2.0)` and `CEIL((total_count + 1.0)/2.0)`) and
+averaging them to handle both even and odd count distributions accurately in SQL.
 
 Currency conversion to base currency happens at query time by joining
 against `exchange_rate` on `employee.currency`, rather than storing
@@ -120,8 +125,12 @@ source of truth in native currency, and conversion logic in one place
 
 Per Incubyte's clarification, the frontend analytics view is a predefined
 dashboard: KPI cards (total payroll, avg/median pay, headcount) + charts
-(bar/pie by country and department) + interactive filters — not an
-open-ended query builder.
+(bar/pie by country and department) + interactive filters. 
+
+**Dashboard Filtering**: Interactive country/department filters on the
+analytics dashboard operate on the pre-fetched aggregate dataset client-side.
+This provides instantaneous UI responsiveness and chart transitions without
+issuing redundant aggregate database roundtrips.
 
 ## Frontend Architecture
 

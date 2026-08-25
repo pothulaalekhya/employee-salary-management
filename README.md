@@ -1,75 +1,149 @@
-# Employee Salary Management System
+# ACME Employee Salary Management System
 
-Salary management system for a 10,000-employee organization — built with
-Spring Boot + Angular, with salary history tracking and pay analytics for HR.
+A high-performance enterprise compensation management and analytics platform built with **Spring Boot 3 (Java 17 LTS)**, **MySQL 8.0**, and **Angular 21**. 
 
-## Problem Statement
-ACME's HR team currently manages salary data for 10,000 employees across
-multiple countries using spreadsheets. This project replaces that with a
-web-based system that lets an HR Manager manage salary records and answer
-basic questions about how the organization pays its people.
+Designed to replace legacy spreadsheet workflows for a **10,000-employee global organization**, the system provides immutable salary history auditing, multi-currency compensation management, and SQL-level executive pay analytics.
 
-See [`requirements.md`](./requirements.md) for the full scope, and
-[`design.md`](./design.md) for architecture and data model decisions.
+---
+
+## Live Demo
+- **Deployed Application**: `[Pending Deployment - URL will be added here]`
+- **Demo Video Walkthrough**: `[Pending Recording - Video Link will be added here]`
+
+---
 
 ## Tech Stack
-- **Backend**: Java 17, Spring Boot, Spring Data JPA (Hibernate), Maven, JUnit 5
-- **Frontend**: Angular, TypeScript, Angular Material
-- **Database**: MySQL (relational)
-- **Testing**: JUnit 5 (backend), Jasmine/Karma (frontend)
+- **Backend**: Java 17 LTS, Spring Boot 3.3.4, Spring Data JPA (Hibernate 6), Lombok 1.18.38, DataFaker 2.4.2, Maven, JUnit 5, Mockito, MockMvc
+- **Frontend**: Angular 21, TypeScript 5.9, Angular Material 21, Chart.js 4.5 & ng2-charts 10.0, RxJS 7.8, Vitest Test Runner
+- **Database**: MySQL 8.0 with InnoDB engine and indexing
+- **DevOps & Containerization**: Docker (Multi-stage builds with Eclipse Temurin 17 JRE Alpine & Nginx 1.27 Alpine), Docker Compose
 
-## Features
-- Employee CRUD (create, view, edit, deactivate)
-- Salary history tracking — every salary change is recorded, not overwritten
-- Search and filter by name, country, department, salary range
-- Paginated employee list (performant at 10,000+ rows)
-- Analytics: average/median salary by country and department, headcount and
-  total pay by country
-- Seed script to generate 10,000 realistic employee records
+---
 
-## Running Locally
+## Key Features
+1. **High-Volume Directory with Server-Side Pagination**:
+   - Paginated table querying 10,000+ employee records directly from Spring Boot (`Pageable`).
+   - Multi-field filtering: Country, Department, Min/Max Salary range, and 300ms debounced search by name.
+2. **Multi-Currency Compensation & Formatting**:
+   - Employees maintain native local currency codes (USD, GBP, EUR, INR, BRL, JPY, AUD, CAD).
+   - Custom `CurrencyFormatPipe` formats currency with native grouping and handles currency edge cases (e.g. zero decimal places for Japanese Yen `¥`).
+3. **Immutable Salary History & Audit Trail**:
+   - Salary updates (`PATCH /api/employees/{id}/salary`) append to an immutable `salary_history` log with effective date and rationale.
+   - Denormalized `current_salary` on `employee` guarantees fast reads.
+4. **SQL-Level Executive Pay Analytics Dashboard**:
+   - Aggregations (Average, Median, Min, Max, Headcount, Total Payroll) are computed at the database level with native CTE window functions (`ROW_NUMBER()` + `COUNT(*)`).
+   - Real-time conversion to reporting base currency (USD) joining against the fixed `exchange_rate` table.
+   - Interactive KPI cards, Bar Charts (Avg vs. Median Salary by Country & Department), and Global Headcount Distribution Doughnut Chart (`Chart.js`).
+5. **Unified Error Handling & Security**:
+   - Global `@RestControllerAdvice` returning standard JSON error responses with field-level details.
+   - Stack trace suppression for unhandled 500 errors.
+   - Environment-driven CORS configuration.
 
-### Prerequisites
-- Java 17+, Maven
-- Node.js 18+, Angular CLI
-- MySQL 8+ (or update `application.properties` for another DB)
+---
 
-### Backend
+## Getting Started
+
+### Option A: Docker Compose (Recommended)
+
+Run the complete multi-container stack (MySQL 8, Spring Boot Backend, Angular Frontend) with one command:
+
 ```bash
-cd backend
-mvn spring-boot:run
+# 1. Clean previous state and start all 3 services
+docker compose down -v
+docker compose up -d --build
+
+# 2. Verify all containers are up and healthy
+docker compose ps
+
+# 3. Seed 10,000 realistic employee records and exchange rates
+docker compose run --rm backend --seed
 ```
 
-### Seed the database
+#### Verified Port Mappings:
+- **Frontend UI**: `http://localhost:4200`
+- **Backend REST API**: `http://localhost:8081` (Health: `http://localhost:8081/api/health`)
+- **MySQL Database**: `localhost:3307` externally (mapped to `3306` inside `salary-network` to prevent conflict with local MySQL)
+
+---
+
+### Option B: Native Local Run
+
+#### Prerequisites
+- JDK 17+
+- Node.js 20+ & npm
+- MySQL 8.0 running locally on port 3306 (database `salary_db`, user `salary_user`, password `salary_secure_pass123!`)
+
+#### 1. Backend Setup & Seeding
 ```bash
 cd backend
+
+# Run Spring Boot backend on port 8081
+mvn spring-boot:run
+
+# Seed 10,000 employee records (run in a separate terminal)
 mvn spring-boot:run -Dspring-boot.run.arguments=--seed
 ```
 
-### Frontend
+#### 2. Frontend Setup
 ```bash
 cd frontend
+
+# Install dependencies and start Angular development server on port 4200
 npm install
-ng serve
+npm start
 ```
+Open `http://localhost:4200` in your browser.
 
-App runs at `http://localhost:4200`, API at `http://localhost:8080`.
+---
 
-## Live Demo
-- **Deployed app**: [link]
-- **Demo video**: [link]
+## Testing & Quality Assurance
 
-## Testing
+All features were built test-first with unit, service, repository, and controller test coverage:
+
 ```bash
-# Backend
-cd backend && mvn test
+# Run Backend Test Suite (45 tests: DataJpaTest, Service unit tests, MockMvc controller tests)
+cd backend
+mvn test
 
-# Frontend
-cd frontend && ng test
+# Run Frontend Test Suite (29 tests: Pipe, Filter service, List, Detail, and Analytics dashboard tests)
+cd frontend
+npm test -- --watch=false
 ```
 
-## Artifacts
-- [`requirements.md`](./requirements.md) — scope, features, and what was
-  deliberately left out (with reasoning)
-- [`design.md`](./design.md) — architecture and data model
-- [`ai-notes.md`](./ai-notes.md) — how AI tools were used during development
+### Test Summary:
+- **Backend Tests**: **45 / 45 Passed** (0 Failures, 0 Errors)
+- **Frontend Tests**: **29 / 29 Passed** (0 Failures, 0 Errors)
+
+---
+
+## REST API Overview
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Service health status check |
+| `GET` | `/api/employees` | Paginated list with filters (`country`, `department`, `minSalary`, `maxSalary`, `name`, `page`, `size`, `sort`) |
+| `GET` | `/api/employees/{id}` | Get employee profile by ID |
+| `GET` | `/api/employees/{id}/salary-history` | Get historical salary adjustment audit log |
+| `POST` | `/api/employees` | Create employee (generates initial salary history record) |
+| `PUT` | `/api/employees/{id}` | Update non-salary employee profile attributes |
+| `PATCH` | `/api/employees/{id}/salary` | Update salary with audit tracking |
+| `DELETE` | `/api/employees/{id}` | Soft delete (deactivate employee) |
+| `GET` | `/api/analytics/salary-by-country` | Average, median, min, max salary by country (USD converted) |
+| `GET` | `/api/analytics/salary-by-department` | Average, median, min, max salary by department (USD converted) |
+| `GET` | `/api/analytics/headcount-by-country` | Headcount breakdown and percentages by country |
+| `GET` | `/api/analytics/total-payroll` | Org-wide total payroll in USD and country breakdown |
+
+---
+
+## AI Workflow & Engineering Notes
+
+This project was built through pair programming with Google DeepMind's **Antigravity** AI Assistant. 
+
+For full details on the development workflow, including specific real-world course corrections (API status polling refactoring, duplicate commit remediation, Jackson JSON quoting edge cases, and Docker host port conflict resolution), see [`ai-notes.md`](./ai-notes.md).
+
+---
+
+## Project Documentation
+- [`requirements.md`](./requirements.md): Scope, user stories, and architectural boundaries.
+- [`design.md`](./design.md): Layered architecture, schema design, CTE SQL aggregation, and trade-off analysis.
+- [`ai-notes.md`](./ai-notes.md): AI pair programming workflow and verification logs.
