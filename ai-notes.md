@@ -37,22 +37,47 @@ The application was built systematically through 11 disciplined, incremental sta
 
 ## 3. Key Prompting Strategies & Prompt Patterns Used
 
-Rather than issuing open-ended generic requests, development was driven by structured, constraint-rich prompt engineering techniques:
+Rather than issuing open-ended generic requests, development was driven by structured, constraint-rich prompt engineering techniques. Below are the core prompt patterns with concrete prompt examples used during development:
 
 ### 1. Stage-Gated Milestone Prompting
-- **Strategy**: Broke the entire project into 10 sequential, isolated stages (0 to 10). Each prompt specified strict boundaries: *"Build Stage N only. Do not touch or advance to Stage N+1 until Stage N passes all tests and verification."*
-- **Benefit**: Prevented AI hallucination, scope creep, and untested assumptions from propagating across layers.
+- **Strategy**: Broke the entire project into 10 sequential, isolated stages (0 to 10). Each prompt specified strict boundaries to prevent AI hallucination, scope creep, and untested assumptions from propagating across layers.
+- **Representative Prompt Example**:
+  ```markdown
+  "Build Stage 6 only — Pay Analytics Endpoints.
+  Requirements:
+  1. Add native SQL queries to compute Average, Median, Min, Max, Headcount, and Total Payroll in USD.
+  2. Implement GET /api/analytics/salary-by-country, /salary-by-department, /headcount-by-country, and /total-payroll.
+  3. Write unit & integration tests covering all 4 endpoints.
+  4. Do not proceed to Stage 7 until all backend tests pass with zero failures."
+  ```
 
-### 2. Specification & Constraint Injection
-- **Strategy**: Injected domain constraints directly into prompts (e.g. *"Use native SQL CTE Window Functions `ROW_NUMBER()` + `COUNT(*)` for calculating exact medians at the database level rather than loading all 10,000 entities into JVM memory"*).
-- **Benefit**: Guaranteed optimal O(1) memory footprint and native database execution.
+### 2. Specification & Technical Constraint Injection
+- **Strategy**: Injected domain constraints directly into prompts to guarantee optimal O(1) memory footprint and native database execution.
+- **Representative Prompt Example**:
+  ```markdown
+  "Implement median salary calculation in Spring Boot repository using native SQL CTE Window Functions:
+  - Join Employee with ExchangeRate on employee.currency = exchange_rate.currency_code
+  - Use ROW_NUMBER() OVER (PARTITION BY ... ORDER BY current_salary * rate) and COUNT(*) OVER (PARTITION BY ...)
+  - Calculate exact median at the database level rather than streaming 10,000 entities into Java memory."
+  ```
 
 ### 3. Verification-First & Test-Driven Directives
-- **Strategy**: Every prompt that introduced or modified code required accompanying unit/integration tests with explicit test assertions (e.g. testing `409 Conflict` on duplicate employee codes, `400 Bad Request` on negative salary, and `404 Not Found` on nonexistent IDs).
-- **Benefit**: Ensured 100% test pass rate across all 45 backend and 29 frontend test suites.
+- **Strategy**: Every prompt that introduced or modified code required accompanying unit/integration tests with explicit test assertions.
+- **Representative Prompt Example**:
+  ```markdown
+  "Add full MockMvc unit tests for EmployeeController:
+  1. Verify GET /api/employees returns 200 with paginated JSON structure.
+  2. Verify POST with duplicate employeeCode returns 409 Conflict with structured ErrorResponse.
+  3. Verify PATCH /api/employees/{id}/salary with negative salary returns 400 Bad Request with field validation errors.
+  4. Verify GET for nonexistent ID returns 404 Not Found."
+  ```
 
 ### 4. Active Human-in-the-Loop Interventions & Counter-Prompting
-- **Strategy**: When AI generated superficial placeholders (e.g., a static "API Online" badge or an unhandled JSON parse exception), explicit correction prompts were issued to replace placeholders with real dynamic implementations.
+- **Strategy**: When AI generated superficial placeholders or hit environment bottlenecks, explicit correction prompts were issued to replace placeholders with real dynamic implementations.
+- **Representative Prompt Example**:
+  ```markdown
+  "The current health badge in the navbar is hardcoded to 'API Online'. Refactor AppComponent to inject ApiService and poll GET /api/health every 5 seconds. If the backend is unreachable or returns non-200, dynamically update the badge to 'API Offline' with an orange pulse indicator."
+  ```
 
 ---
 
