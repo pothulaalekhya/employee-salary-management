@@ -90,14 +90,17 @@ public class DataSeeder implements ApplicationRunner {
         seedData(10000);
     }
 
-    @Transactional
     public void seedData(int targetCount) {
-        // IDEMPOTENCY CHECK:
-        // If the database already contains employee records, skip seeding to avoid duplicate data or constraint violations.
-        // This makes the seed script safe to re-run in CI, Docker startup, or local resets.
-        if (employeeRepository.count() > 0) {
+        if (employeeRepository.count() >= targetCount) {
             log.info("[DataSeeder] Database already contains {} employees. Skipping seed execution.", employeeRepository.count());
             return;
+        }
+
+        if (employeeRepository.count() > 0 && employeeRepository.count() < targetCount) {
+            log.info("[DataSeeder] Found partial data ({} employees). Cleaning up to complete full {} seed...", employeeRepository.count(), targetCount);
+            salaryHistoryRepository.deleteAllInBatch();
+            employeeRepository.deleteAllInBatch();
+            exchangeRateRepository.deleteAllInBatch();
         }
 
         log.info("[DataSeeder] Starting database seed process for {} employees...", targetCount);
@@ -137,7 +140,7 @@ public class DataSeeder implements ApplicationRunner {
         Random random = new Random(42); // Fixed seed for reproducible generation
         List<String> countries = new ArrayList<>(COUNTRY_CURRENCY_MAP.keySet());
 
-        int batchSize = 1000;
+        int batchSize = 500;
         List<Employee> employeeBatch = new ArrayList<>(batchSize);
         List<SalaryHistory> historyBatch = new ArrayList<>(batchSize);
 
