@@ -18,4 +18,9 @@ public class HealthController {
     public ResponseEntity<Map<String, String>> checkHealth() {
         return ResponseEntity.ok(Collections.singletonMap("status", "ok"));
     }
+
+    @GetMapping("/")
+    public ResponseEntity<Map<String, String>> root() {
+        return ResponseEntity.ok(Map.of("message", "ACME Employee Salary API is running", "health", "/api/health"));
+    }
 }
