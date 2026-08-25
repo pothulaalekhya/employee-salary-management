@@ -7,6 +7,7 @@ import com.acme.employeesalary.dto.SalaryHistoryResponseDto;
 import com.acme.employeesalary.dto.SalaryUpdateRequestDto;
 import com.acme.employeesalary.entity.Employee;
 import com.acme.employeesalary.entity.SalaryHistory;
+import com.acme.employeesalary.exception.DuplicateResourceException;
 import com.acme.employeesalary.exception.ResourceNotFoundException;
 import com.acme.employeesalary.exception.ValidationException;
 import com.acme.employeesalary.repository.EmployeeRepository;
@@ -109,7 +110,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         } else {
             employeeCode = employeeCode.trim().toUpperCase();
             if (employeeRepository.existsByEmployeeCode(employeeCode)) {
-                throw new ValidationException("Employee with code '" + employeeCode + "' already exists");
+                throw new DuplicateResourceException("Employee with code '" + employeeCode + "' already exists");
             }
         }
 
