@@ -15,7 +15,27 @@
 
 ---
 
-## 2. Key Prompting Strategies & Prompt Patterns Used
+## 2. Stage-by-Stage Implementation & AI Collaboration Timeline
+
+The application was built systematically through 11 disciplined, incremental stages (0 to 10), enforcing strict test verification gates at each milestone:
+
+| Stage | Milestone | Objective | AI Collaboration & Prompts | Verification Gate |
+|:---:|---|---|---|---|
+| **Stage 0** | **Scaffolding & Health Shell** | Initialize Java 17 Spring Boot & Angular 21 projects with dual-dev server setup. | Prompted project scaffolds, build descriptors, and dynamic health polling component. | Verified `GET /api/health` returns `200 OK` and frontend displays live pulse badge. |
+| **Stage 1** | **Domain Entities & JPA** | Design MySQL schema, JPA entities, and repositories with indexing. | Directed entity modeling for `Employee`, `SalaryHistory`, and `ExchangeRate` with composite indexes. | Verified schema generation and repository interface compilation. |
+| **Stage 2** | **Employee Read & Filter API** | Build paginated employee directory queries with multi-parameter filtering. | Implemented `GET /api/employees` using Spring `Pageable` and Criteria/JPA queries. | Verified with 8 unit/integration tests for sorting, pagination, and filters. |
+| **Stage 3** | **Employee Write Operations** | Implement employee creation, updates, and soft deletion. | Generated DTOs, Bean Validation constraints, and soft-delete business logic (`active=false`). | Verified with 7 controller & service tests including `400 Bad Request` validations. |
+| **Stage 4** | **Salary History & Audit Trail** | Build immutable audit log for employee salary adjustments. | Prompted `PATCH /api/employees/{id}/salary` to append historical snapshots while updating `current_salary`. | Verified with 6 tests verifying immutable log creation and effective dating. |
+| **Stage 5** | **10,000 Data Seeding Engine** | Generate 10,000 realistic employees across 8 countries and 6 departments. | Built `DataSeeder` using DataFaker with realistic currency distributions and 500-record batch commits. | Executed seed command verifying all 10,000 rows and 8 FX rates inserted cleanly. |
+| **Stage 6** | **SQL Pay Analytics Engine** | Calculate org-wide pay statistics in USD reporting currency. | Engineered native SQL CTE Window Functions (`ROW_NUMBER()` + `COUNT(*)`) for exact medians and aggregations. | Verified 8 analytics tests across country, department, and total payroll endpoints. |
+| **Stage 7** | **Frontend Directory & Details** | Create responsive employee table, search debouncing, and edit dialogs. | Built Angular Material table, RxJS 300ms debounce pipe, custom `CurrencyFormatPipe`, and detail view. | Verified 15 component/pipe tests with Vitest + interactive browser subagent. |
+| **Stage 8** | **Frontend Analytics Dashboard** | Visualize pay distributions, comparisons, and headcount KPIs. | Integrated Chart.js & `ng2-charts` for Avg vs. Median bar charts and country distribution doughnuts. | Verified 14 dashboard tests + verified interactive client-side filtering in browser. |
+| **Stage 9** | **Hardening & Dockerization** | Add global exception handling and multi-stage container orchestration. | Implemented `@RestControllerAdvice`, multi-stage Dockerfiles (JRE 17 Alpine & Nginx), and Docker Compose. | Verified 45 backend + 29 frontend tests passing; all 3 Docker containers healthy. |
+| **Stage 10** | **Cloud Deployment & Docs** | Deploy full-stack app to cloud and finalize architectural documentation. | Configured Render (Backend), Vercel (Frontend), Aiven (Cloud MySQL), and wrote `README.md` / `ai-notes.md`. | Verified live cloud endpoints (`employee-salary-management-six.vercel.app`). |
+
+---
+
+## 3. Key Prompting Strategies & Prompt Patterns Used
 
 Rather than issuing open-ended generic requests, development was driven by structured, constraint-rich prompt engineering techniques:
 
@@ -36,7 +56,7 @@ Rather than issuing open-ended generic requests, development was driven by struc
 
 ---
 
-## 3. Specific Course Corrections & Discrepancies Caught During Review
+## 4. Specific Course Corrections & Discrepancies Caught During Review
 
 Rather than blindly accepting generated code, active human-in-the-loop review identified and corrected several critical issues:
 
@@ -58,7 +78,7 @@ Rather than blindly accepting generated code, active human-in-the-loop review id
 
 ---
 
-## 4. Review & Verification Workflow
+## 5. Review & Verification Workflow
 
 The project followed a rigorous 4-step verification loop for every stage:
 
